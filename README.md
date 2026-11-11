@@ -5,37 +5,32 @@
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
 
-A modern, local-first desktop application designed to convert **HEIC**, **HEIF**, and **HIF** photo collections to **JPG without compromising on image quality or metadata**.
-
-Most standard HEIC converters discard vital camera metadata, downsample colors, and strip wide-gamut color profiles. **PhotoFlow** preserves full color fidelity, orientation, GPS coordinates, and camera profiles—all processed entirely on your local machine with zero cloud uploads.
+A modern, local-first desktop application designed for **high-fidelity photo conversion** (HEIC/HEIF/HIF to JPG) and **smart facial recognition photo filtering**—processed entirely offline on your local machine with zero cloud uploads.
 
 ---
 
 ## ✨ Features
 
-### High-Fidelity Conversion Pipeline
+### 👤 Smart Face Filter (New)
+* **Multi-Person Permutation Recognition**: Identifies photos containing **Person 1**, **Person 2**, or **both**, whether they appear alone, together, or within larger group photos.
+* **Local Neural Face Embeddings**: Powered by OpenCV's state-of-the-art **YuNet** face detector and **SFace** facial recognizer (128-dimensional biometric embeddings).
+* **Safe Organization**:
+  * **Copy Mode (Default)**: Preserves original folders untouched and copies matched photos into `Matched_Photos/`.
+  * **Separate Mode**: Organizes your collection by moving target photos to `Matched_Photos/` and all other photos to `Other_Photos/`.
+* **Universal Format Support**: Scans and filters `.heic`, `.heif`, `.hif`, `.jpg`, `.jpeg`, `.png`, `.webp`, and `.bmp`.
+
+### 🎨 High-Fidelity HEIC Conversion Pipeline
 * **Display P3 Color Profile Retention**: Preserves wide-gamut color profiles from Apple devices so colors never appear dull, washed out, or shifted.
 * **Full Chroma Resolution (4:4:4)**: Disables default JPEG chroma downsampling (`subsampling=0`), keeping fine lines, sharp text, and saturated colors crisp.
 * **Full EXIF & Geotag Preservation**: Retains GPS coordinates, capture dates (`DateTimeOriginal`), exposure settings, lens details, and camera models.
 * **Smart Orientation Correction**: Automatically normalizes photo orientation based on EXIF tags without risk of double-rotation.
 * **Alpha Channel Transparency**: Composites transparent graphics and iOS subject cutouts over a clean white background instead of rendering black artifacts.
 * **Filesystem Timestamp Matching**: Duplicates original file modification and access times (`os.utime`), keeping your photo library sorted chronologically.
-* **Broad Camera Compatibility**: Supports `.heic` and `.heif` (Apple / Android) as well as `.hif` (Canon EOS, Sony Alpha, and Nikon mirrorless cameras).
 
-### Desktop Application
-* **Modern Dark Mode UI**: Clean, responsive interface built with CustomTkinter that smoothly adapts across display scaling settings.
-* **Multi-Threaded Concurrency**: Leverages multi-core CPUs via a background `ThreadPoolExecutor` to process high-resolution batches rapidly without freezing the UI.
-* **Custom Output Paths**: Easily specify custom output folders or keep the organized `Converted_JPG` subfolder.
-* **Real-Time Progress & Cancellation**: Live progress bar, photo counter, and graceful cancellation support.
+### 🖥️ Desktop Application
+* **Modern Tabbed Interface**: Built with CustomTkinter, seamlessly switching between the **HEIC Converter** and the **Face Filter**.
+* **Multi-Threaded Concurrency**: Processes high-resolution photo batches rapidly in the background without freezing the UI.
 * **100% Private & Offline**: Works completely offline. Your photos never leave your device.
-
----
-
-## 🗺️ Roadmap / Planned Features
-
-* [ ] Automatic photo reorganization into `Year/Month` folder structures.
-* [ ] Perceptual hash duplicate photo detection.
-* [ ] Thumbnail gallery and side-by-side comparison preview.
 
 ---
 
@@ -50,7 +45,7 @@ Most standard HEIC converters discard vital camera metadata, downsample colors, 
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/PhotoFlow.git
+   git clone https://github.com/CodeWithMG01/PhotoFlow.git
    cd PhotoFlow
    ```
 
@@ -82,9 +77,18 @@ Launch the PhotoFlow desktop application:
 python -m photoflow
 ```
 
-1. Click **Browse** under **1. Select photo folder** to pick your folder of HEIC/HEIF images.
-2. *(Optional)* Click **Browse** under **2. Output location** to pick a custom destination.
-3. Adjust the **JPG image quality** slider (default: `95%`).
+### Using the Face Filter:
+1. Click the **"Face Filter"** tab at the top.
+2. Select your photo collection folder.
+3. Click **Choose** next to **Person 1** and select a clear reference photo of their face.
+4. *(Optional)* Click **Choose** next to **Person 2** to select a second person's face.
+5. Choose your output location and action (**Copy** or **Separate**).
+6. Click **FILTER PHOTOS BY FACE**.
+
+### Using the HEIC Converter:
+1. Click the **"HEIC Converter"** tab.
+2. Select your folder of `.heic` / `.heif` / `.hif` photos.
+3. Adjust your target JPEG quality.
 4. Click **CONVERT PHOTOS**.
 
 ---
@@ -95,33 +99,6 @@ PhotoFlow includes a full test suite built with `pytest`:
 
 ```bash
 pytest
-```
-
----
-
-## 📁 Project Structure
-
-```text
-PhotoFlow/
-├── .github/
-│   └── workflows/
-│       └── test.yml          # Automated CI test pipeline
-├── assets/
-│   └── .gitkeep
-├── src/
-│   └── photoflow/
-│       ├── __init__.py       # Package definition
-│       ├── __main__.py       # Entry point for python -m photoflow
-│       ├── converter.py      # Core conversion pipeline & concurrency
-│       └── main.py           # CustomTkinter GUI application
-├── tests/
-│   ├── test_app.py           # UI & extension validation tests
-│   └── test_converter.py     # Conversion, EXIF, ICC, and timestamp tests
-├── .gitignore                # Git ignore rules
-├── LICENSE                   # MIT License
-├── pyproject.toml            # Project packaging specification
-├── README.md                 # Project documentation
-└── requirements.txt          # Python dependencies
 ```
 
 ---

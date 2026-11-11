@@ -1,4 +1,6 @@
 Pillow
 pillow-heif
 customtkinter
+opencv-python
+numpy
 pytest

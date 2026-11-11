@@ -13,4 +13,7 @@ Thumbs.db
 
 Organized_Photos/
 Converted_JPG/
+Filtered_Photos/
+Matched_Photos/
 MyPhonePhotos/
+*.onnx
