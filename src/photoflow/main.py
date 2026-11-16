@@ -15,6 +15,10 @@ from photoflow.converter import (
 from photoflow.face_filter import (
     filter_photos_by_faces,
     clean_trip_photos,
+    load_face_engines,
+    load_image_bgr,
+    detect_faces,
+    DEFAULT_MATCH_THRESHOLD,
     SUPPORTED_IMAGE_FORMATS,
 )
 from photoflow.organizer import (
@@ -228,6 +232,7 @@ class PhotoFlowApp(ctk.CTk):
         container = ctk.CTkFrame(tab, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=15, pady=8)
 
+        # 1. Source Folder
         ctk.CTkLabel(container, text="1. Select photo collection to scan", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
         face_src_frame = ctk.CTkFrame(container)
         face_src_frame.pack(fill="x", pady=(0, 6))
@@ -238,14 +243,26 @@ class PhotoFlowApp(ctk.CTk):
         self.face_browse_src_btn = ctk.CTkButton(face_src_frame, text="Browse", width=80, height=28, command=self.select_face_source)
         self.face_browse_src_btn.pack(side="right", padx=8, pady=4)
 
-        ctk.CTkLabel(container, text="2. Select reference photos of faces to identify", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
+        # 2. Destination Folder (Optional)
+        ctk.CTkLabel(container, text="2. Destination for removed photos (Optional)", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
+        face_out_frame = ctk.CTkFrame(container)
+        face_out_frame.pack(fill="x", pady=(0, 6))
+
+        self.face_out_label = ctk.CTkLabel(face_out_frame, text="Default: Removed_Other_People (inside collection)", text_color="gray", anchor="w")
+        self.face_out_label.pack(side="left", padx=10, pady=6, fill="x", expand=True)
+
+        self.face_browse_out_btn = ctk.CTkButton(face_out_frame, text="Browse", width=80, height=28, command=self.select_face_output)
+        self.face_browse_out_btn.pack(side="right", padx=8, pady=4)
+
+        # 3. Reference Photos
+        ctk.CTkLabel(container, text="3. Select reference photos of faces to identify", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
         ref_frame = ctk.CTkFrame(container)
         ref_frame.pack(fill="x", pady=(0, 6))
 
         # Person 1 (You)
         p1_subframe = ctk.CTkFrame(ref_frame, fg_color="transparent")
         p1_subframe.pack(fill="x", padx=8, pady=3)
-        ctk.CTkLabel(p1_subframe, text="Person 1 (You):", width=110, font=("Arial", 12, "bold"), anchor="w").pack(side="left")
+        ctk.CTkLabel(p1_subframe, text="Person 1 (You):", width=120, font=("Arial", 12, "bold"), anchor="w").pack(side="left")
         self.person_a_label = ctk.CTkLabel(p1_subframe, text="No reference photo selected (Required)", text_color="gray", anchor="w")
         self.person_a_label.pack(side="left", padx=6, fill="x", expand=True)
         self.person_a_btn = ctk.CTkButton(p1_subframe, text="Choose", width=75, height=26, command=self.select_person_a)
@@ -254,14 +271,14 @@ class PhotoFlowApp(ctk.CTk):
         # Person 2 (Husband / Partner)
         p2_subframe = ctk.CTkFrame(ref_frame, fg_color="transparent")
         p2_subframe.pack(fill="x", padx=8, pady=(0, 4))
-        ctk.CTkLabel(p2_subframe, text="Person 2 (Husband):", width=110, font=("Arial", 12, "bold"), anchor="w").pack(side="left")
+        ctk.CTkLabel(p2_subframe, text="Person 2 (Husband):", width=120, font=("Arial", 12, "bold"), anchor="w").pack(side="left")
         self.person_b_label = ctk.CTkLabel(p2_subframe, text="No reference photo selected (Optional)", text_color="gray", anchor="w")
         self.person_b_label.pack(side="left", padx=6, fill="x", expand=True)
         self.person_b_btn = ctk.CTkButton(p2_subframe, text="Choose", width=75, height=26, command=self.select_person_b)
         self.person_b_btn.pack(side="right")
 
-        # Mode Selection
-        ctk.CTkLabel(container, text="3. Operation mode & action", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
+        # 4. Mode Selection & Removal Scope
+        ctk.CTkLabel(container, text="4. Operation mode & sensitivity", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
 
         self.face_mode_var = ctk.StringVar(value="trip_cleaner")
 
@@ -285,35 +302,50 @@ class PhotoFlowApp(ctk.CTk):
         )
         m2.pack(anchor="w")
 
-        # Trip Cleaner removal scope frame
+        # Trip Cleaner removal scope & sensitivity frame
         self.trip_scope_frame = ctk.CTkFrame(container)
         self.trip_scope_frame.pack(fill="x", pady=(4, 6), padx=4)
 
-        ctk.CTkLabel(
-            self.trip_scope_frame,
-            text="Trip Cleaner Removal Scope:",
-            font=("Arial", 12, "bold")
-        ).pack(anchor="w", padx=10, pady=(6, 2))
+        scope_subframe = ctk.CTkFrame(self.trip_scope_frame, fg_color="transparent")
+        scope_subframe.pack(fill="x", padx=10, pady=(4, 2))
 
         self.trip_scope_var = ctk.StringVar(value="solo_only")
         sc1 = ctk.CTkRadioButton(
-            self.trip_scope_frame,
+            scope_subframe,
             text="Move other people's solo photos only (Keep scenery & group photos)",
             variable=self.trip_scope_var,
             value="solo_only"
         )
-        sc1.pack(anchor="w", padx=15, pady=(2, 2))
+        sc1.pack(side="left", padx=(0, 15))
 
         sc2 = ctk.CTkRadioButton(
-            self.trip_scope_frame,
-            text="Move all photos without us (Both other solo & other group shots)",
+            scope_subframe,
+            text="Move all photos without us",
             variable=self.trip_scope_var,
             value="all_without_us"
         )
-        sc2.pack(anchor="w", padx=15, pady=(2, 6))
+        sc2.pack(side="left")
 
-        # Progress
-        ctk.CTkLabel(container, text="4. Progress", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
+        # Sensitivity menu
+        sens_subframe = ctk.CTkFrame(self.trip_scope_frame, fg_color="transparent")
+        sens_subframe.pack(fill="x", padx=10, pady=(2, 4))
+        ctk.CTkLabel(sens_subframe, text="Match Sensitivity:", font=("Arial", 11, "bold")).pack(side="left", padx=(0, 8))
+        self.face_sens_var = ctk.StringVar(value="Balanced (Recommended)")
+        self.face_sens_menu = ctk.CTkOptionMenu(
+            sens_subframe,
+            values=[
+                "Balanced (Recommended)",
+                "Safe / Forgiving (Keeps more photos of you)",
+                "Strict Match"
+            ],
+            variable=self.face_sens_var,
+            width=280,
+            height=26
+        )
+        self.face_sens_menu.pack(side="left")
+
+        # 5. Progress
+        ctk.CTkLabel(container, text="5. Progress", font=("Arial", 14, "bold")).pack(anchor="w", pady=(2, 4))
         self.face_progress = ctk.CTkProgressBar(container, height=10)
         self.face_progress.pack(fill="x", pady=(2, 4))
         self.face_progress.set(0)
@@ -673,6 +705,22 @@ class PhotoFlowApp(ctk.CTk):
     # ==========================================
     # Face Filter & Trip Cleaner Callbacks
     # ==========================================
+    def verify_reference_photo(self, photo_path: Path) -> int:
+        """Verify that a chosen reference photo has a detectable face."""
+        try:
+            detector, _ = load_face_engines()
+            img = load_image_bgr(photo_path)
+            faces = detect_faces(img, detector)
+            if not faces:
+                h, w = img.shape[:2]
+                detector.setInputSize((w, h))
+                _, raw = detector.detect(img)
+                if raw is not None and len(raw) > 0:
+                    faces = [f for f in raw]
+            return len(faces)
+        except Exception:
+            return -1
+
     def select_face_source(self):
         if self.running:
             return
@@ -680,9 +728,21 @@ class PhotoFlowApp(ctk.CTk):
         if not folder:
             return
         self.face_source_folder = Path(folder)
-        self.face_output_folder = self.face_source_folder
+        if not self.face_custom_output:
+            self.face_output_folder = self.face_source_folder
+            self.face_out_label.configure(text=f"Default: Removed_Other_People (inside collection)")
         self.face_src_label.configure(text=str(self.face_source_folder))
         self.face_status_label.configure(text="Collection selected. Choose reference faces.")
+
+    def select_face_output(self):
+        if self.running:
+            return
+        folder = filedialog.askdirectory(title="Select folder for removed photos")
+        if not folder:
+            return
+        self.face_output_folder = Path(folder)
+        self.face_custom_output = True
+        self.face_out_label.configure(text=str(self.face_output_folder))
 
     def select_person_a(self):
         if self.running:
@@ -693,7 +753,19 @@ class PhotoFlowApp(ctk.CTk):
         )
         if file_path:
             self.person_a_path = Path(file_path)
-            self.person_a_label.configure(text=self.person_a_path.name, text_color="white")
+            face_cnt = self.verify_reference_photo(self.person_a_path)
+            if face_cnt > 0:
+                self.person_a_label.configure(
+                    text=f"{self.person_a_path.name} (Face detected ✓)",
+                    text_color="#4CAF50"
+                )
+            elif face_cnt == 0:
+                self.person_a_label.configure(
+                    text=f"{self.person_a_path.name} (⚠️ No face detected! Pick a clearer photo)",
+                    text_color="#FFA500"
+                )
+            else:
+                self.person_a_label.configure(text=self.person_a_path.name, text_color="white")
 
     def select_person_b(self):
         if self.running:
@@ -704,7 +776,27 @@ class PhotoFlowApp(ctk.CTk):
         )
         if file_path:
             self.person_b_path = Path(file_path)
-            self.person_b_label.configure(text=self.person_b_path.name, text_color="white")
+            face_cnt = self.verify_reference_photo(self.person_b_path)
+            if face_cnt > 0:
+                self.person_b_label.configure(
+                    text=f"{self.person_b_path.name} (Face detected ✓)",
+                    text_color="#4CAF50"
+                )
+            elif face_cnt == 0:
+                self.person_b_label.configure(
+                    text=f"{self.person_b_path.name} (⚠️ No face detected! Pick a clearer photo)",
+                    text_color="#FFA500"
+                )
+            else:
+                self.person_b_label.configure(text=self.person_b_path.name, text_color="white")
+
+    def get_face_threshold(self) -> float:
+        sens = self.face_sens_var.get()
+        if "Safe" in sens:
+            return 0.32
+        elif "Strict" in sens:
+            return 0.38
+        return DEFAULT_MATCH_THRESHOLD
 
     def start_face_filtering(self):
         if self.running:
@@ -727,6 +819,7 @@ class PhotoFlowApp(ctk.CTk):
 
         self.face_start_btn.configure(state="disabled")
         self.face_browse_src_btn.configure(state="disabled")
+        self.face_browse_out_btn.configure(state="disabled")
         self.person_a_btn.configure(state="disabled")
         self.person_b_btn.configure(state="disabled")
         self.face_cancel_btn.configure(state="normal")
@@ -736,15 +829,16 @@ class PhotoFlowApp(ctk.CTk):
 
         mode = self.face_mode_var.get()
         trip_scope = self.trip_scope_var.get()
+        threshold = self.get_face_threshold()
 
         self.worker = threading.Thread(
             target=self.run_face_worker,
-            args=(mode, trip_scope),
+            args=(mode, trip_scope, threshold),
             daemon=True
         )
         self.worker.start()
 
-    def run_face_worker(self, mode, trip_scope):
+    def run_face_worker(self, mode, trip_scope, threshold):
         try:
             if mode == "trip_cleaner":
                 results = clean_trip_photos(
@@ -753,6 +847,7 @@ class PhotoFlowApp(ctk.CTk):
                     person_a_ref=self.person_a_path,
                     person_b_ref=self.person_b_path,
                     removal_scope=trip_scope,
+                    threshold=threshold,
                     progress_callback=lambda cur, tot, txt: self.events.put(("face_progress", cur, tot, txt)),
                     cancel_event=self.cancel_event
                 )
@@ -764,6 +859,7 @@ class PhotoFlowApp(ctk.CTk):
                     person_a_ref=self.person_a_path,
                     person_b_ref=self.person_b_path,
                     action="move",
+                    threshold=threshold,
                     progress_callback=lambda cur, tot, txt: self.events.put(("face_progress", cur, tot, txt)),
                     cancel_event=self.cancel_event
                 )
@@ -858,6 +954,7 @@ class PhotoFlowApp(ctk.CTk):
         # Reset face filter UI
         self.face_start_btn.configure(state="normal")
         self.face_browse_src_btn.configure(state="normal")
+        self.face_browse_out_btn.configure(state="normal")
         self.person_a_btn.configure(state="normal")
         self.person_b_btn.configure(state="normal")
         self.face_cancel_btn.configure(state="disabled")

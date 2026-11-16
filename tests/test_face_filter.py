@@ -36,6 +36,24 @@ def test_find_photos_to_scan(tmp_path):
     assert all(p.suffix.lower() in SUPPORTED_IMAGE_FORMATS for p in photos)
 
 
+def test_find_photos_to_scan_when_output_is_source(tmp_path):
+    source = tmp_path / "photos"
+    source.mkdir()
+
+    (source / "img1.JPG").touch()
+    (source / "img2.heic").touch()
+
+    # Excluded subdirectory inside source
+    removed_dir = source / "Removed_Other_People"
+    removed_dir.mkdir()
+    (removed_dir / "bad.jpg").touch()
+
+    # When output_folder is equal to source_folder
+    photos = find_photos_to_scan(source, source)
+    assert len(photos) == 2
+    assert (removed_dir / "bad.jpg") not in photos
+
+
 def test_engine_initialization():
     detector, recognizer = load_face_engines()
     assert detector is not None
