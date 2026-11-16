@@ -3,4 +3,5 @@ pillow-heif
 customtkinter
 opencv-python
 numpy
+imageio-ffmpeg
 pytest

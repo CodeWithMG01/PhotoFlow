@@ -5,14 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "photoflow"
 version = "0.1.0"
-description = "A local-first desktop photo organizer and face filter"
+description = "A local-first desktop photo and video management suite"
 requires-python = ">=3.10"
 dependencies = [
     "Pillow",
     "pillow-heif",
     "customtkinter",
     "opencv-python",
-    "numpy"
+    "numpy",
+    "imageio-ffmpeg"
 ]
 
 [project.optional-dependencies]
